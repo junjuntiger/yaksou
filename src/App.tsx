@@ -360,10 +360,41 @@ function CameraScreen({ onFormReady }: {
     setFile(f)
     setPreviewUrl(URL.createObjectURL(f))
   }
-  const handleScan = () => {
+  const [scanError, setScanError] = useState('')
+
+  const fileToBase64 = (f: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve((reader.result as string).split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(f)
+    })
+
+  const handleScan = async () => {
     if (!previewUrl || !file) return
     setScanning(true)
-    setTimeout(() => { setScanning(false); onFormReady(randomAI(), previewUrl, file) }, 3000)
+    setScanError('')
+    try {
+      const imageBase64 = await fileToBase64(file)
+      const res = await fetch('/api/identify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64, mimeType: file.type }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setScanError(data.error)
+        onFormReady(randomAI(), previewUrl, file)
+      } else {
+        const cat = (['薬草', '花', '雑草'].includes(data.category) ? data.category : '薬草') as typeof AI_MOCK[0]['category']
+        onFormReady({ name: data.name, category: cat, efficacy: data.efficacy || '', usage: data.usage || '', emoji: EMOJI_MAP[cat] }, previewUrl, file)
+      }
+    } catch {
+      setScanError('解析に失敗しました')
+      onFormReady(randomAI(), previewUrl, file)
+    } finally {
+      setScanning(false)
+    }
   }
 
   return (
@@ -380,6 +411,7 @@ function CameraScreen({ onFormReady }: {
       <button onClick={() => inputRef.current?.click()} className="w-full max-w-sm py-3 rounded-2xl border-2 border-[#1D9E75] text-[#1D9E75] font-semibold">
         📷 カメラで撮影 / 写真を選択
       </button>
+      {scanError && <p className="text-red-500 text-xs bg-red-50 rounded-xl px-3 py-2 w-full max-w-sm">{scanError}</p>}
       {previewUrl && (
         <button onClick={handleScan} disabled={scanning}
           className="w-full max-w-sm py-3 rounded-2xl bg-[#1D9E75] text-white font-semibold disabled:opacity-60 flex items-center justify-center gap-2">
