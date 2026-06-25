@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import './index.css'
-import { auth, db, storage } from './firebase'
+import { auth, db } from './firebase'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -739,7 +739,7 @@ export default function App() {
   const [selectedRecord, setSelectedRecord] = useState<PlantRecord | null>(null)
   const [pendingAI, setPendingAI] = useState<typeof AI_MOCK[0] | null>(null)
   const [pendingPreview, setPendingPreview] = useState<string>('')
-  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [_pendingFile, setPendingFile] = useState<File | null>(null)
 
   // ─ Auth state listener
   useEffect(() => {
